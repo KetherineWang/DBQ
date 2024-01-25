@@ -1,0 +1,468 @@
+---
+title: "DBQ Prioritization - Ensign College"
+format: html
+editor: visual
+---
+
+```{r}
+# Load necessary packages
+library(tidyverse)
+library(readxl)
+library(tidyr)
+library(dplyr)
+```
+
+```{r}
+# Import DBQ Ensign College (Cleaned) responses
+ensign_college_cleaned <- read_excel("Department Baseline Questionnaire.xlsx", sheet = "Ensign College (Cleaned)")
+```
+
+```{r}
+# Rename the column headers
+names(ensign_college_cleaned) <- c("ID",
+                           "DataProcessingActivity",
+                           "DataSubject",
+                           "PersonalDataCategory",
+                           "DataCollectionSource",
+                           "DataCollectionMethod",
+                           "SharedData",
+                           "InternalOrExternal",
+                           "DSAs",
+                           "DataStorageLocation",
+                           "PublicFacingWebsites",
+                           "PrivacyNotice",
+                           "CookieBanner",
+                           "LanguageBesidesEnglish",
+                           "MinorRelatedData",
+                           "ConcernsOrQuestions")
+
+# Remove the secondary questions
+ensign_college_main_questions <- ensign_college_cleaned %>%
+  select(-InternalOrExternal, -LanguageBesidesEnglish, -ConcernsOrQuestions)
+
+# Create a data frame for each question
+# Remove the trailing semicolon
+# Separate the values into rows
+data_processing_activity <- ensign_college_cleaned %>%
+  select(ID, DataProcessingActivity) %>%
+  mutate(DataProcessingActivity = sub(";+$", "", DataProcessingActivity)) %>%
+  separate_rows(DataProcessingActivity, sep = ";")
+
+data_subject <- ensign_college_cleaned %>%
+  select(ID, DataSubject) %>%
+  mutate(DataSubject = sub(";+$", "", DataSubject)) %>%
+  separate_rows(DataSubject, sep = ";")
+
+personal_data_category <- ensign_college_cleaned %>%
+  select(ID, PersonalDataCategory) %>%
+  mutate(PersonalDataCategory = sub(";+$", "", PersonalDataCategory)) %>%
+  separate_rows(PersonalDataCategory, sep = ";")
+
+data_collection_source <- ensign_college_cleaned %>%
+  select(ID, DataCollectionSource) %>%
+  mutate(DataCollectionSource = sub(";+$", "", DataCollectionSource)) %>%
+  separate_rows(DataCollectionSource, sep = ";")
+
+data_collection_method <- ensign_college_cleaned %>%
+  select(ID, DataCollectionMethod) %>%
+  mutate(DataCollectionMethod = sub(";+$", "", DataCollectionMethod)) %>%
+  separate_rows(DataCollectionMethod, sep = ";")
+
+shared_data <- ensign_college_cleaned %>%
+  select(ID, SharedData) %>%
+  mutate(SharedData = sub(";+$", "", SharedData)) %>%
+  separate_rows(SharedData, sep = ";")
+
+dsas <- ensign_college_cleaned %>%
+  select(ID, DSAs) %>%
+  mutate(DSAs = sub(";+$", "", DSAs)) %>%
+  separate_rows(DSAs, sep = ";")
+
+data_storage_location <- ensign_college_cleaned %>%
+  select(ID, DataStorageLocation) %>%
+  mutate(DataStorageLocation = sub(";+$", "", DataStorageLocation)) %>%
+  separate_rows(DataStorageLocation, sep = ";")
+
+public_facing_websites <- ensign_college_cleaned %>%
+  select(ID, PublicFacingWebsites) %>%
+  mutate(PublicFacingWebsites = sub(";+$", "", PublicFacingWebsites)) %>%
+  separate_rows(PublicFacingWebsites, sep = ";")
+
+privacy_notice <- ensign_college_cleaned %>%
+  select(ID, PrivacyNotice) %>%
+  mutate(PrivacyNotice = sub(";+$", "", PrivacyNotice)) %>%
+  separate_rows(PrivacyNotice, sep = ";")
+
+cookie_banner <- ensign_college_cleaned %>%
+  select(ID, CookieBanner) %>%
+  mutate(CookieBanner = sub(";+$", "", CookieBanner)) %>%
+  separate_rows(CookieBanner, sep = ";")
+
+minor_related_data <- ensign_college_cleaned %>%
+  select(ID, MinorRelatedData) %>%
+  mutate(MinorRelatedData = sub(";+$", "", MinorRelatedData)) %>%
+  separate_rows(MinorRelatedData, sep = ";")
+```
+
+```{r, fig.align='center'}
+# Data Processing Activity
+
+# Assign risk scores to data processing activities
+dataprocessingactivity_riskscores <- c("Academic Advisement" = 3,
+                                       "Alumni Outreach" = 3,
+                                       "Campus Activities or Events" = 2,
+                                       "Compliance" = 3,
+                                       "Donors" = 2,
+                                       "Employee Awards" = 2,
+                                       "Employee Compensation" = 2,
+                                       "Employee Recruitment and Hiring" = 2,
+                                       "Employee Training and Development" = 2,
+                                       "Faculty Instruction" = 1,
+                                       "Financial" = 3,
+                                       "Internships" = 2,
+                                       "Marketing Materials" = 3,
+                                       "Operations and Maintenance" = 1,
+                                       "Promotional Emails" = 3,
+                                       "Research" = 3,
+                                       "Sale of Goods or Services" = 1,
+                                       "Student Admissions" = 3,
+                                       "Student Graduation" = 2,
+                                       "Student Life" = 3,
+                                       "Student Pre-Admission" = 2,
+                                       "Student Registration" = 2,
+                                       "Study Abroad" = 2,
+                                       "Surveys" = 3)
+
+# Calculate and find the highest risk score for each respondent
+calculate_dataprocessingactivity_maxriskscore <- function(data_processing_activity, dataprocessingactivity_riskscores, other_dataprocessingactivity_riskscore = 3) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  data_processing_activity$DataProcessingActivity[data_processing_activity$DataProcessingActivity %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  data_processing_activity$DataProcessingActivityRiskScore <- ifelse(is.na(data_processing_activity$DataProcessingActivity), 0,
+                                               ifelse(data_processing_activity$DataProcessingActivity %in% names(dataprocessingactivity_riskscores), dataprocessingactivity_riskscores[data_processing_activity$DataProcessingActivity], other_dataprocessingactivity_riskscore))
+  
+  # Aggregate to find the maximum risk score for each respondent
+  dataprocessingactivity_maxriskscore_byid <- aggregate(DataProcessingActivityRiskScore ~ ID, data_processing_activity, max)
+  
+  return(dataprocessingactivity_maxriskscore_byid)
+}
+
+# Print the results
+dataprocessingactivity_maxriskscore_table <- calculate_dataprocessingactivity_maxriskscore(data_processing_activity, dataprocessingactivity_riskscores, other_dataprocessingactivity_riskscore = 3)
+
+print(dataprocessingactivity_maxriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Data Subject
+
+# Assign risk scores to data subjects
+datasubject_riskscores <- c("Alumni" = 1,
+                            "Contractors" = 1,
+                            "Customers" = 1,
+                            "Donors" = 1,
+                            "Employees/Faculty" = 1,
+                            "Former Employees/Faculty" = 1,
+                            "Individuals involved in research or studies" = 2,
+                            "Prospective Employees" = 1,
+                            "Prospective Students" = 1,
+                            "Students" = 1,
+                            "Vendors" = 1,
+                            "Visitors (including website visitors)" = 1)
+
+# Calculate and find the highest risk score for each respondent
+calculate_datasubject_maxriskscore <- function(data_subject, datasubject_riskscores, other_datasubject_riskscore = 3) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  data_subject$DataSubject[data_subject$DataSubject %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  data_subject$DataSubjectRiskScore <- ifelse(is.na(data_subject$DataSubject), 0,
+                                   ifelse(data_subject$DataSubject %in% names(datasubject_riskscores), datasubject_riskscores[data_subject$DataSubject], other_datasubject_riskscore))
+  
+  # Aggregate to find the maximum risk score for each respondent
+  datasubject_maxriskscore_byid <- aggregate(DataSubjectRiskScore ~ ID, data_subject, max)
+  
+  return(datasubject_maxriskscore_byid)
+}
+
+# Print the results
+datasubject_maxriskscore_table <- calculate_datasubject_maxriskscore(data_subject, datasubject_riskscores, other_datasubject_riskscore = 3)
+
+print(datasubject_maxriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Personal Data Category
+
+# Assign risk scores to personal data categories
+personaldatacategory_riskscores <- c("Name & Role: Name, Job Title, Job Level, Profession, Social Media Account" = 1,
+                                     "Internal Identifiers: Student or Employment ID, Net ID, etc." = 1,
+                                     "Identification Numbers: Government ID, Tax ID, SSN, Passport Number, etc." = 3,
+                                     "Contact Information: Phone Number, Address, Email Address, Zip Code, IP Address" = 1,
+                                     "Personal Characteristics: Place of Birth, Age, Marital Status, Race, Nationality, Ethnic Origin, Military Status" = 3,
+                                     "Healthcare & Physical Characteristics: Height, Weight, Health Symptoms, Disability, Medication, Heart Rate, Blood Pressure, Other Health Info" = 3,
+                                     "Education & Training: Major or Course of Study, Professional Certifications & Licenses, Publications, Training Programs, Academic Grades, Ranking, Degrees Obtained, Schools and Universities Attended, Professional Org Membership, Professional Background, CV Information" = 1,
+                                     "Financial Information: Financial Account Numbers, Credit Card & Debit Card Numbers, CCV, CC Expiration Date, Loans, Compensation, Expenses, Incentives & Bonuses, Insurance" = 3,
+                                     "Biometrics & Genetics: Fingerprints, Facial Photographs Used for Identification Purposes, Facial Recognition Data, Genetic Markers, Retina Scans, DNA Sequence" = 3,
+                                     "Relationship Management: Engagement Rankings or Scores, Retention Ranking, Purchase Amount Ranking, Product or Services, Utilization Ranking, Other Customer, Student, Alumni Visitor, Measurements" = 2,
+                                     "Physical & Electronic Tracking: Event or Activity Attendance, Persistent Online Identifiers (e.g., Cookies), Precise Geographic Location Data, Surveillance Images, Browsing Infor (e.g., Website History, Network Interaction)" = 2,
+                                     "Politics: Politics Party Affiliation, Political Opinions, Political Views, Political Official Position or Appointment" = 3,
+                                     "Religion: Ecclesiastical Endorsements, Religious Practices, Religious Preference or Affiliation, Church, Synagogue or Other Place of Worship, Calling, Position or Role with Church, Synagogue or Other Place of Worship, Attendance at Religious Ceremonies" = 3,
+                                     "Background & Criminal: Legal Judgments or Orders, Criminal Convictions, Administrative Sanctions and Penalties, Criminal Suspicions, Criminal Charges, Criminal Sanctions and Penalties, Evictions, Results of a Background Check" = 3,
+                                     "Dates: Date of Birth, Date of Death, Hire Date, Other Dates Relative to the Individual" = 2,
+                                     "Misc.: Sexual Orientation, Data About Sex Life, Trade Union Membership, Philosophical Beliefs" = 3,
+                                     "Other: Survey Responses, Club Membership, Travel Information, Family Information, Photographs, Video/Audio Recordings, User Account Info, Other Data Related to a Natural Person" = 2)
+
+# Calculate and find the cumulative risk score for each respondent
+calculate_personaldatacategory_cumulativeriskscore <- function(personal_data_category, personaldatacategory_riskscores, other_personaldatacategory_riskscore = -100) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  personal_data_category$PersonalDataCategory[personal_data_category$PersonalDataCategory %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  personal_data_category$PersonalDataCategoryRiskScore <- ifelse(is.na(personal_data_category$PersonalDataCategory), 0,
+                                             ifelse(personal_data_category$PersonalDataCategory %in% names(personaldatacategory_riskscores), personaldatacategory_riskscores[personal_data_category$PersonalDataCategory], other_personaldatacategory_riskscore))
+  
+  # Aggregate to find the risk score sum for each respondent
+  personaldatacategory_cumulativeriskscore_byid <- aggregate(PersonalDataCategoryRiskScore ~ ID, personal_data_category, sum)
+  
+  return(personaldatacategory_cumulativeriskscore_byid)
+}
+
+# Print the results
+personaldatacategory_cumulativeriskscore_table <- calculate_personaldatacategory_cumulativeriskscore(personal_data_category, personaldatacategory_riskscores, other_personaldatacategory_riskscore = -100)
+
+print(personaldatacategory_cumulativeriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Data Collection Source
+
+# Assign risk scores to data collection sources
+datacollectionsource_riskscores <- c("Directly from the individual" = 1,
+                                     "From another representative authorized to provide information on the individual's behalf (i.e., parent, ecclesiastical leader)" = 1,
+                                     "From another department or internal employee (i.e., professor, supervisor, etc.)" = 1,
+                                     "Obtained from a 3rd Party (i.e., vendor)" = 2)
+
+# Calculate and find the highest risk score for each respondent
+calculate_datacollectionsource_maxriskscore <- function(data_collection_source, datacollectionsource_riskscores, other_datacollectionsource_riskscore = 3) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  data_collection_source$DataCollectionSource[data_collection_source$DataCollectionSource %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  data_collection_source$DataCollectionSourceRiskScore <- ifelse(is.na(data_collection_source$DataCollectionSource), 0,
+                                             ifelse(data_collection_source$DataCollectionSource %in% names(datacollectionsource_riskscores), datacollectionsource_riskscores[data_collection_source$DataCollectionSource], other_datacollectionsource_riskscore))
+  
+  # Aggregate to find the maximum risk score for each respondent
+  datacollectionsource_maxriskscore_byid <- aggregate(DataCollectionSourceRiskScore ~ ID, data_collection_source, max)
+  
+  return(datacollectionsource_maxriskscore_byid)
+}
+
+# Print the results
+datacollectionsource_maxriskscore_table <- calculate_datacollectionsource_maxriskscore(data_collection_source, datacollectionsource_riskscores, other_datacollectionsource_riskscore = 3)
+
+print(datacollectionsource_maxriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Data Collection Method
+
+# Assign risk scores to data collection methods
+datacollectionmethod_riskscores <- c("Paper forms" = 2,
+                                     "Electronic forms, surveys, or questionnaires" = 1,
+                                     "Emails or other digital communications" = 2,
+                                     "Mobile application or website" = 1,
+                                     "Focus groups or interviews" = 2,
+                                     "Business Application" = 1)
+
+# Calculate and find the cumulative risk score for each respondent
+calculate_datacollectionmethod_cumulativeriskscore <- function(data_collection_method, datacollectionmethod_riskscores, other_datacollectionmethod_riskscore = 3) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  data_collection_method$DataCollectionMethod[data_collection_method$DataCollectionMethod %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  data_collection_method$DataCollectionMethodRiskScore <- ifelse(is.na(data_collection_method$DataCollectionMethod), 0,
+                                             ifelse(data_collection_method$DataCollectionMethod %in% names(datacollectionmethod_riskscores), datacollectionmethod_riskscores[data_collection_method$DataCollectionMethod], other_datacollectionmethod_riskscore))
+  
+  # Aggregate to find the risk score sum for each respondent
+  datacollectionmethod_cumulativeriskscore_byid <- aggregate(DataCollectionMethodRiskScore ~ ID, data_collection_method, sum)
+  
+  return(datacollectionmethod_cumulativeriskscore_byid)
+}
+
+# Print the results
+datacollectionmethod_cumulativeriskscore_table <- calculate_datacollectionmethod_cumulativeriskscore(data_collection_method, datacollectionmethod_riskscores, other_datacollectionmethod_riskscore = 3)
+
+print(datacollectionmethod_cumulativeriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Shared Data
+
+# Assign risk scores to shared data (yes/no)
+shareddata_riskscore_table <- shared_data %>%
+  mutate(SharedDataRiskScore = ifelse(is.na(SharedData), 0,
+                            ifelse(SharedData == "Yes", 1, 0))) %>%
+  select(-SharedData)
+
+# Print the results
+print(shareddata_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# DSAs
+
+# Assign risk scores to DSAs (yes/no)
+dsas_riskscore_table <- dsas %>%
+  mutate(DSAsRiskScore = ifelse(is.na(DSAs), 0,
+                            ifelse(DSAs == "Yes", 0, 3))) %>%
+  select(-DSAs)
+
+# Print the results
+print(dsas_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# Data Storage Location
+
+# Assign risk scores to data storage locations
+datastoragelocation_riskscores <- c("File cabinet" = 1,
+                                    "Hard drive" = 2,
+                                    "Shared drive" = 1,
+                                    "Box or One Drive" = 1,
+                                    "Email" = 2,
+                                    "Business Application" = 1)
+
+# Calculate and find the highest risk score for each respondent
+calculate_datastoragelocation_maxriskscore <- function(data_storage_location, datastoragelocation_riskscores, other_datastoragelocation_riskscore = 3) {
+  
+  # Replace 'NA' or 'N/A' strings with NA value
+  data_storage_location$DataStorageLocation[data_storage_location$DataStorageLocation %in% c("NA", "N/A")] <- NA
+  
+  # Assign risk scores to responses
+  data_storage_location$DataStorageLocationRiskScore <- ifelse(is.na(data_storage_location$DataStorageLocation), 0,
+                                            ifelse(data_storage_location$DataStorageLocation %in% names(datastoragelocation_riskscores), datastoragelocation_riskscores[data_storage_location$DataStorageLocation], other_datastoragelocation_riskscore))
+  
+  # Aggregate to find the maximum risk score for each respondent
+  datastoragelocation_maxriskscore_byid <- aggregate(DataStorageLocationRiskScore ~ ID, data_storage_location, max)
+  
+  return(datastoragelocation_maxriskscore_byid)
+}
+
+# Print the results
+datastoragelocation_maxriskscore_table <- calculate_datastoragelocation_maxriskscore(data_storage_location, datastoragelocation_riskscores, other_datastoragelocation_riskscore = 3)
+
+print(datastoragelocation_maxriskscore_table)
+```
+
+```{r, fig.align='center'}
+# Public Facing Websites
+
+# Assign risk scores to public facing websites (yes/no)
+publicfacingwebsites_riskscore_table <- public_facing_websites %>%
+  mutate(PublicFacingWebsitesRiskScore = ifelse(is.na(PublicFacingWebsites), 0,
+                            ifelse(PublicFacingWebsites == "Yes", 2, 0))) %>%
+  select(-PublicFacingWebsites)
+
+# Print the results
+print(publicfacingwebsites_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# Privacy Notice
+
+# Assign risk scores to privacy notice (yes/no)
+privacynotice_riskscore_table <- privacy_notice %>%
+  mutate(PrivacyNoticeRiskScore = ifelse(is.na(PrivacyNotice), 0,
+                            ifelse(PrivacyNotice == "Yes", 0, 3))) %>%
+  select(-PrivacyNotice)
+
+# Print the results
+print(privacynotice_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# Cookie Banner
+
+# Assign risk scores to cookie banner (yes/no)
+cookiebanner_riskscore_table <- cookie_banner %>%
+  mutate(CookieBannerRiskScore = ifelse(is.na(CookieBanner), 0,
+                            ifelse(CookieBanner == "Yes", 0, 3))) %>%
+  select(-CookieBanner)
+
+# Print the results
+print(cookiebanner_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# Minor Related Data
+
+# Assign risk scores to minor related data (yes/no)
+minorrelateddata_riskscore_table <- minor_related_data %>%
+  mutate(MinorRelatedDataRiskScore = ifelse(is.na(MinorRelatedData), 0,
+                            ifelse(MinorRelatedData == "Yes", 3, 0))) %>%
+  select(-MinorRelatedData)
+
+# Print the results
+print(minorrelateddata_riskscore_table)
+```
+
+```{r, fig.align='center'}
+# Join all risk score tables for all questions into one table
+joined_risk_score_table <- dataprocessingactivity_maxriskscore_table %>%
+  inner_join(datasubject_maxriskscore_table, by = "ID") %>%
+  inner_join(personaldatacategory_cumulativeriskscore_table, by = "ID") %>%
+  inner_join(datacollectionsource_maxriskscore_table, by = "ID") %>%
+  inner_join(datacollectionmethod_cumulativeriskscore_table, by = "ID") %>%
+  inner_join(shareddata_riskscore_table, by = "ID") %>%
+  inner_join(dsas_riskscore_table, by = "ID") %>%
+  inner_join(datastoragelocation_maxriskscore_table, by = "ID") %>%
+  inner_join(publicfacingwebsites_riskscore_table, by = "ID") %>%
+  inner_join(privacynotice_riskscore_table, by = "ID") %>%
+  inner_join(cookiebanner_riskscore_table, by = "ID") %>%
+  inner_join(minorrelateddata_riskscore_table, by = "ID")
+
+print(joined_risk_score_table)
+
+# Sum up all risk scores for all questions for each respondent
+risk_scores <- joined_risk_score_table %>%
+  mutate(TotalRiskScore = rowSums(select(., DataProcessingActivityRiskScore, DataSubjectRiskScore, PersonalDataCategoryRiskScore, DataCollectionSourceRiskScore, DataCollectionMethodRiskScore, SharedDataRiskScore, DSAsRiskScore, DataStorageLocationRiskScore, PublicFacingWebsitesRiskScore, PrivacyNoticeRiskScore, CookieBannerRiskScore, MinorRelatedDataRiskScore)))
+
+print(risk_scores)
+
+# Arrange in descending order
+ordered_total_risk_score <- risk_scores %>%
+  arrange(desc(TotalRiskScore)) %>%
+  select(ID, TotalRiskScore)
+
+# Print the results
+print(ordered_total_risk_score)
+```
+
+```{r, fig.align='center'}
+# Import DBQ Ensign College responses
+ensign_college <- read_excel("Department Baseline Questionnaire.xlsx", sheet = "Ensign College")
+
+# Extract the ID and name columns only
+ensign_college <- ensign_college[, c(1, 6)]
+
+# Rename the column headers
+names(ensign_college) <- c("ID",
+                           "Name")
+
+# Join IDs with corresponding names and risk scores
+dbq_prioritization <- ordered_total_risk_score %>%
+  inner_join(ensign_college, by = "ID")
+
+# Swap column orders
+dbq_prioritization <- dbq_prioritization[, c(1, 3, 2)]
+
+# Print the results
+print(dbq_prioritization)
+```

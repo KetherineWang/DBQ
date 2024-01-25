@@ -1,0 +1,608 @@
+---
+title: "Overall Patterns and Outliers - Ensign College"
+format: html
+editor: visual
+---
+
+```{r}
+# Load necessary packages
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(tidyr)
+library(dplyr)
+```
+
+```{r}
+# Import DBQ Ensign College (Cleaned) responses
+ensign_college_cleaned <- read_excel("Department Baseline Questionnaire.xlsx", sheet = "Ensign College (Cleaned)")
+```
+
+```{r}
+# Rename the column headers
+names(ensign_college_cleaned) <- c("ID",
+                           "DataProcessingActivity",
+                           "DataSubject",
+                           "PersonalDataCategory",
+                           "DataCollectionSource",
+                           "DataCollectionMethod",
+                           "SharedData",
+                           "InternalOrExternal",
+                           "DSAs",
+                           "DataStorageLocation",
+                           "PublicFacingWebsites",
+                           "PrivacyNotice",
+                           "CookieBanner",
+                           "LanguageBesidesEnglish",
+                           "MinorRelatedData",
+                           "ConcernsOrQuestions")
+
+# Remove the secondary questions
+ensign_college_main_questions <- ensign_college_cleaned %>%
+  select(-InternalOrExternal, -LanguageBesidesEnglish, -ConcernsOrQuestions)
+
+# Create a data frame for each question
+# Remove the trailing semicolon
+# Separate the values into rows
+data_processing_activity <- ensign_college_cleaned %>%
+  select(ID, DataProcessingActivity) %>%
+  mutate(DataProcessingActivity = sub(";+$", "", DataProcessingActivity)) %>%
+  separate_rows(DataProcessingActivity, sep = ";")
+
+data_subject <- ensign_college_cleaned %>%
+  select(ID, DataSubject) %>%
+  mutate(DataSubject = sub(";+$", "", DataSubject)) %>%
+  separate_rows(DataSubject, sep = ";")
+
+personal_data_category <- ensign_college_cleaned %>%
+  select(ID, PersonalDataCategory) %>%
+  mutate(PersonalDataCategory = sub(";+$", "", PersonalDataCategory)) %>%
+  separate_rows(PersonalDataCategory, sep = ";")
+
+data_collection_source <- ensign_college_cleaned %>%
+  select(ID, DataCollectionSource) %>%
+  mutate(DataCollectionSource = sub(";+$", "", DataCollectionSource)) %>%
+  separate_rows(DataCollectionSource, sep = ";")
+
+data_collection_method <- ensign_college_cleaned %>%
+  select(ID, DataCollectionMethod) %>%
+  mutate(DataCollectionMethod = sub(";+$", "", DataCollectionMethod)) %>%
+  separate_rows(DataCollectionMethod, sep = ";")
+
+shared_data <- ensign_college_cleaned %>%
+  select(ID, SharedData) %>%
+  mutate(SharedData = sub(";+$", "", SharedData)) %>%
+  separate_rows(SharedData, sep = ";")
+
+dsas <- ensign_college_cleaned %>%
+  select(ID, DSAs) %>%
+  mutate(DSAs = sub(";+$", "", DSAs)) %>%
+  separate_rows(DSAs, sep = ";")
+
+data_storage_location <- ensign_college_cleaned %>%
+  select(ID, DataStorageLocation) %>%
+  mutate(DataStorageLocation = sub(";+$", "", DataStorageLocation)) %>%
+  separate_rows(DataStorageLocation, sep = ";")
+
+public_facing_websites <- ensign_college_cleaned %>%
+  select(ID, PublicFacingWebsites) %>%
+  mutate(PublicFacingWebsites = sub(";+$", "", PublicFacingWebsites)) %>%
+  separate_rows(PublicFacingWebsites, sep = ";")
+
+privacy_notice <- ensign_college_cleaned %>%
+  select(ID, PrivacyNotice) %>%
+  mutate(PrivacyNotice = sub(";+$", "", PrivacyNotice)) %>%
+  separate_rows(PrivacyNotice, sep = ";")
+
+cookie_banner <- ensign_college_cleaned %>%
+  select(ID, CookieBanner) %>%
+  mutate(CookieBanner = sub(";+$", "", CookieBanner)) %>%
+  separate_rows(CookieBanner, sep = ";")
+
+minor_related_data <- ensign_college_cleaned %>%
+  select(ID, MinorRelatedData) %>%
+  mutate(MinorRelatedData = sub(";+$", "", MinorRelatedData)) %>%
+  separate_rows(MinorRelatedData, sep = ";")
+```
+
+```{r, fig.align='center'}
+# Data Processing Activity
+
+# Define NA responses
+data_processing_activity <- data_processing_activity %>%
+  mutate(DataProcessingActivity = na_if(DataProcessingActivity, "NA")) %>%
+  mutate(DataProcessingActivity = na_if(DataProcessingActivity, "N/A"))
+
+# Define standard responses
+dataprocessingactivity_standardresponses <- c("Academic Advisement",
+                                              "Alumni Outreach",
+                                              "Campus Activities or Events",
+                                              "Compliance",
+                                              "Donors",
+                                              "Employee Awards",
+                                              "Employee Compensation",
+                                              "Employee Recruitment and Hiring",
+                                              "Employee Training and Development",
+                                              "Faculty Instruction",
+                                              "Financial",
+                                              "Internships",
+                                              "Marketing Materials",
+                                              "Operations and Maintenance",
+                                              "Promotional Emails",
+                                              "Research",
+                                              "Sale of Goods or Services",
+                                              "Student Admissions",
+                                              "Student Graduation",
+                                              "Student Life",
+                                              "Student Pre-Admission",
+                                              "Student Registration",
+                                              "Study Abroad",
+                                              "Surveys")
+
+# Categorize standard, NA, and other responses
+data_processing_activity_categorized <- data_processing_activity %>%
+  mutate(DataProcessingActivityCategory = case_when(
+    DataProcessingActivity %in% dataprocessingactivity_standardresponses ~ DataProcessingActivity,
+    is.na(DataProcessingActivity) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Data Processing Activity Bar Chart
+ggplot(data_processing_activity_categorized, aes(x = DataProcessingActivityCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Data Processing Activity Category", y = "Count", title = "What are the core data processing activities in your area?")
+
+# View other responses
+dataprocessingactivity_otherresponses <- data_processing_activity_categorized %>%
+  filter(DataProcessingActivityCategory == "Other")
+
+print(dataprocessingactivity_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Data Subject
+
+# Define NA responses
+data_subject <- data_subject %>%
+  mutate(DataSubject = na_if(DataSubject, "NA")) %>%
+  mutate(DataSubject = na_if(DataSubject, "N/A"))
+
+# Define standard responses
+datasubject_standardresponses <- c("Alumni",
+                                   "Contractors",
+                                   "Customers",
+                                   "Donors",
+                                   "Employees/Faculty",
+                                   "Former Employees/Faculty",
+                                   "Individuals involved in research or studies",
+                                   "Prospective Employees",
+                                   "Prospective Students",
+                                   "Students",
+                                   "Vendors",
+                                   "Visitors (including website visitors)")
+
+
+# Categorize standard, NA, and other responses
+data_subject_categorized <- data_subject %>%
+  mutate(DataSubjectCategory = case_when(
+    DataSubject %in% datasubject_standardresponses ~ DataSubject,
+    is.na(DataSubject) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Data Subject Bar Chart
+ggplot(data_subject_categorized, aes(x = DataSubjectCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Data Subject Category", y = "Count", title = "What are the core categories of individuals (known as data subjects) whose personal data are processed in your area?")
+
+# View other responses
+datasubject_otherresponses <- data_subject_categorized %>%
+  filter(DataSubjectCategory == "Other")
+
+print(datasubject_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Personal Data Category
+
+# Define NA responses
+personal_data_category <- personal_data_category %>%
+  mutate(PersonalDataCategory = na_if(PersonalDataCategory, "NA")) %>%
+  mutate(PersonalDataCategory = na_if(PersonalDataCategory, "N/A"))
+
+# Define standard responses
+personaldatacategory_standardresponses <- c("Name & Role: Name, Job Title, Job Level, Profession, Social Media Account",
+                                            "Internal Identifiers: Student or Employment ID, Net ID, etc.",
+                                            "Identification Numbers: Government ID, Tax ID, SSN, Passport Number, etc.",
+                                            "Contact Information: Phone Number, Address, Email Address, Zip Code, IP Address",
+                                            "Personal Characteristics: Place of Birth, Age, Marital Status, Race, Nationality, Ethnic Origin, Military Status",
+                                            "Healthcare & Physical Characteristics: Height, Weight, Health Symptoms, Disability, Medication, Heart Rate, Blood Pressure, Other Health Info",
+                                            "Education & Training: Major or Course of Study, Professional Certifications & Licenses, Publications, Training Programs, Academic Grades, Ranking, Degrees Obtained, Schools and Universities Attended, Professional Org Membership, Professional Background, CV Information",
+                                            "Financial Information: Financial Account Numbers, Credit Card & Debit Card Numbers, CCV, CC Expiration Date, Loans, Compensation, Expenses, Incentives & Bonuses, Insurance",
+                                            "Biometrics & Genetics: Fingerprints, Facial Photographs Used for Identification Purposes, Facial Recognition Data, Genetic Markers, Retina Scans, DNA Sequence",
+                                            "Relationship Management: Engagement Rankings or Scores, Retention Ranking, Purchase Amount Ranking, Product or Services, Utilization Ranking, Other Customer, Student, Alumni Visitor, Measurements",
+                                            "Physical & Electronic Tracking: Event or Activity Attendance, Persistent Online Identifiers (e.g., Cookies), Precise Geographic Location Data, Surveillance Images, Browsing Infor (e.g., Website History, Network Interaction)",
+                                            "Politics: Politics Party Affiliation, Political Opinions, Political Views, Political Official Position or Appointment",
+                                            "Religion: Ecclesiastical Endorsements, Religious Practices, Religious Preference or Affiliation, Church, Synagogue or Other Place of Worship, Calling, Position or Role with Church, Synagogue or Other Place of Worship, Attendance at Religious Ceremonies",
+                                            "Background & Criminal: Legal Judgments or Orders, Criminal Convictions, Administrative Sanctions and Penalties, Criminal Suspicions, Criminal Charges, Criminal Sanctions and Penalties, Evictions, Results of a Background Check",
+                                            "Dates: Date of Birth, Date of Death, Hire Date, Other Dates Relative to the Individual",
+                                            "Misc.: Sexual Orientation, Data About Sex Life, Trade Union Membership, Philosophical Beliefs",
+                                            "Other: Survey Responses, Club Membership, Travel Information, Family Information, Photographs, Video/Audio Recordings, User Account Info, Other Data Related to a Natural Person")
+
+
+# Categorize standard, NA, and other responses
+personal_data_category_categorized <- personal_data_category %>%
+  mutate(PersonalDataCategoryCategory = case_when(
+    PersonalDataCategory %in% personaldatacategory_standardresponses ~ PersonalDataCategory,
+    is.na(PersonalDataCategory) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Differentiate the columns by renaming
+names(personal_data_category_categorized) <- c("ID",
+                                               "PersonalData",
+                                               "PersonalDataCategory")
+
+# Create mapping of full responses to shortened responses
+personaldatacategory_responsemapping <- c("Name & Role: Name, Job Title, Job Level, Profession, Social Media Account" = "Name & Role",
+                                          "Internal Identifiers: Student or Employment ID, Net ID, etc." = "Internal Identifiers",
+                                          "Identification Numbers: Government ID, Tax ID, SSN, Passport Number, etc." = "Identification Numbers",
+                                          "Contact Information: Phone Number, Address, Email Address, Zip Code, IP Address" = "Contact Information",
+                                          "Personal Characteristics: Place of Birth, Age, Marital Status, Race, Nationality, Ethnic Origin, Military Status" = "Personal Characteristics",
+                                          "Healthcare & Physical Characteristics: Height, Weight, Health Symptoms, Disability, Medication, Heart Rate, Blood Pressure, Other Health Info" = "Healthcare & Physical Characteristics",
+                                          "Education & Training: Major or Course of Study, Professional Certifications & Licenses, Publications, Training Programs, Academic Grades, Ranking, Degrees Obtained, Schools and Universities Attended, Professional Org Membership, Professional Background, CV Information" = "Education & Training",
+                                          "Financial Information: Financial Account Numbers, Credit Card & Debit Card Numbers, CCV, CC Expiration Date, Loans, Compensation, Expenses, Incentives & Bonuses, Insurance" = "Financial Information",
+                                          "Biometrics & Genetics: Fingerprints, Facial Photographs Used for Identification Purposes, Facial Recognition Data, Genetic Markers, Retina Scans, DNA Sequence" = "Biometrics & Genetics",
+                                          "Relationship Management: Engagement Rankings or Scores, Retention Ranking, Purchase Amount Ranking, Product or Services, Utilization Ranking, Other Customer, Student, Alumni Visitor, Measurements" = "Relationship Management",
+                                          "Physical & Electronic Tracking: Event or Activity Attendance, Persistent Online Identifiers (e.g., Cookies), Precise Geographic Location Data, Surveillance Images, Browsing Infor (e.g., Website History, Network Interaction)" = "Physical & Electronic Tracking",
+                                          "Politics: Politics Party Affiliation, Political Opinions, Political Views, Political Official Position or Appointment" = "Polotics",
+                                          "Religion: Ecclesiastical Endorsements, Religious Practices, Religious Preference or Affiliation, Church, Synagogue or Other Place of Worship, Calling, Position or Role with Church, Synagogue or Other Place of Worship, Attendance at Religious Ceremonies" = "Religion",
+                                          "Background & Criminal: Legal Judgments or Orders, Criminal Convictions, Administrative Sanctions and Penalties, Criminal Suspicions, Criminal Charges, Criminal Sanctions and Penalties, Evictions, Results of a Background Check" = "Background & Criminal",
+                                          "Dates: Date of Birth, Date of Death, Hire Date, Other Dates Relative to the Individual" = "Dates",
+                                          "Misc.: Sexual Orientation, Data About Sex Life, Trade Union Membership, Philosophical Beliefs" = "Misc.",
+                                          "Other: Survey Responses, Club Membership, Travel Information, Family Information, Photographs, Video/Audio Recordings, User Account Info, Other Data Related to a Natural Person" = "Other Personal Data")
+
+# Apply shortened responses
+personal_data_category_categorized <- personal_data_category_categorized %>%
+  mutate(ShortenedPersonalDataCategory = personaldatacategory_responsemapping[PersonalDataCategory])
+
+# Personal Data Category Bar Chart
+ggplot(personal_data_category_categorized, aes(x = ShortenedPersonalDataCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Personal Data Category", y = "Count", title = "What personal data categories are involved in this processing?")
+
+# View other responses
+personaldatacategory_otherresponses <- personal_data_category_categorized %>%
+  filter(PersonalDataCategory == "Other")
+
+print(personaldatacategory_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Data Collection Source
+
+# Define NA responses
+data_collection_source <- data_collection_source %>%
+  mutate(DataCollectionSource = na_if(DataCollectionSource, "NA")) %>%
+  mutate(DataCollectionSource = na_if(DataCollectionSource, "N/A"))
+
+# Define standard responses
+datacollectionsource_standardresponses <- c("Directly from the individual",
+                                            "From another representative authorized to provide information on the individual's behalf (i.e., parent, ecclesiastical leader)",
+                                            "From another department or internal employee (i.e., professor, supervisor, etc.)",
+                                            "Obtained from a 3rd Party (i.e., vendor)")
+
+# Categorize standard, NA, and other responses
+data_collection_source_categorized <- data_collection_source %>%
+  mutate(DataCollectionSourceCategory = case_when(
+    DataCollectionSource %in% datacollectionsource_standardresponses ~ DataCollectionSource,
+    is.na(DataCollectionSource) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Create mapping of full responses to shortened responses
+datacollectionsource_responsemapping <- c("Directly from the individual" = "Directly from the individual",
+                                          "From another representative authorized to provide information on the individual's behalf (i.e., parent, ecclesiastical leader)" = "From another authorized representative",
+                                          "From another department or internal employee (i.e., professor, supervisor, etc.)" = "From another department or internal employee",
+                                          "Obtained from a 3rd Party (i.e., vendor)" = "Obtained from a 3rd Party",
+                                          "Other" = "Other")
+
+# Apply shortened responses
+data_collection_source_categorized <- data_collection_source_categorized %>%
+  mutate(ShortenedDataCollectionSourceCategory = datacollectionsource_responsemapping[DataCollectionSourceCategory])
+
+# Data Collection Source Bar Chart
+ggplot(data_collection_source_categorized, aes(x = ShortenedDataCollectionSourceCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Data Collection Source Category", y = "Count", title = "What is the source of the data collection?")
+
+# View other responses
+datacollectionsource_otherresponses <- data_collection_source_categorized %>%
+  filter(DataCollectionSourceCategory == "Other")
+
+print(datacollectionsource_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Data Collection Method
+
+# Define NA responses
+data_collection_method <- data_collection_method %>%
+  mutate(DataCollectionMethod = na_if(DataCollectionMethod, "NA")) %>%
+  mutate(DataCollectionMethod = na_if(DataCollectionMethod, "N/A"))
+
+# Define standard responses
+datacollectionmethod_standardresponses <- c("Paper forms",
+                                            "Electronic forms, surveys, or questionnaires",
+                                            "Emails or other digital communications",
+                                            "Mobile application or website",
+                                            "Focus groups or interviews",
+                                            "Business Application")
+
+
+# Categorize standard, NA, and other responses
+data_collection_method_categorized <- data_collection_method %>%
+  mutate(DataCollectionMethodCategory = case_when(
+    DataCollectionMethod %in% datacollectionmethod_standardresponses ~ DataCollectionMethod,
+    is.na(DataCollectionMethod) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Data Collection Method Bar Chart
+ggplot(data_collection_method_categorized, aes(x = DataCollectionMethodCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Data Collection Method Category", y = "Count", title = "What methods are used to collect this data?")
+
+# View other responses
+datacollectionmethod_otherresponses <- data_collection_method_categorized %>%
+  filter(DataCollectionMethodCategory == "Other")
+
+print(datacollectionmethod_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Shared Data
+
+# Define NA responses
+shared_data <- shared_data %>%
+  mutate(SharedData = na_if(SharedData, "NA")) %>%
+  mutate(SharedData = na_if(SharedData, "N/A"))
+
+# Define standard responses
+shareddata_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+shared_data_categorized <- shared_data %>%
+  mutate(SharedDataCategory = case_when(
+    SharedData %in% shareddata_standardresponses ~ SharedData,
+    is.na(SharedData) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Shared Data Bar Chart
+ggplot(shared_data_categorized, aes(x = SharedDataCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Shared Data Category", y = "Count", title = "Is your data shared with other departments, vendors, or institutions, etc.?")
+
+# View other responses
+shareddata_otherresponses <- shared_data_categorized %>%
+  filter(SharedDataCategory == "Other")
+
+print(shareddata_otherresponses)
+```
+
+```{r, fig.align='center'}
+# DSAs
+
+# Define NA responses
+dsas <- dsas %>%
+  mutate(DSAs = na_if(DSAs, "NA")) %>%
+  mutate(DSAs = na_if(DSAs, "N/A"))
+
+# Define standard responses
+dsas_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+dsas_categorized <- dsas %>%
+  mutate(DSAsCategory = case_when(
+    DSAs %in% dsas_standardresponses ~ DSAs,
+    is.na(DSAs) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# DSAs Bar Chart
+ggplot(dsas_categorized, aes(x = DSAsCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "DSAs Category", y = "Count", title = "Are corresponding Data Sharing Agreements (DSAs) in place?")
+
+# View other responses
+dsas_otherresponses <- dsas_categorized %>%
+  filter(DSAsCategory == "Other")
+
+print(dsas_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Data Storage Location
+
+# Define NA responses
+data_storage_location <- data_storage_location %>%
+  mutate(DataStorageLocation = na_if(DataStorageLocation, "NA")) %>%
+  mutate(DataStorageLocation = na_if(DataStorageLocation, "N/A"))
+
+# Define standard responses
+datastoragelocation_standardresponses <- c("File cabinet",
+                                           "Hard drive",
+                                           "Shared drive",
+                                           "Box or One Drive",
+                                           "Email",
+                                           "Business Application")
+
+
+# Categorize standard, NA, and other responses
+data_storage_location_categorized <- data_storage_location %>%
+  mutate(DataStorageLocationCategory = case_when(
+    DataStorageLocation %in% datastoragelocation_standardresponses ~ DataStorageLocation,
+    is.na(DataStorageLocation) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Data Storage Location Bar Chart
+ggplot(data_storage_location_categorized, aes(x = DataStorageLocationCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Data Storage Location Category", y = "Count", title = "Where is this data stored?")
+
+# View other responses
+datastoragelocation_otherresponses <- data_storage_location_categorized %>%
+  filter(DataStorageLocationCategory == "Other")
+
+print(datastoragelocation_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Public Facing Websites
+
+# Define NA responses
+public_facing_websites <- public_facing_websites %>%
+  mutate(PublicFacingWebsites = na_if(PublicFacingWebsites, "NA")) %>%
+  mutate(PublicFacingWebsites = na_if(PublicFacingWebsites, "N/A"))
+
+# Define standard responses
+publicfacingwebsites_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+public_facing_websites_categorized <- public_facing_websites %>%
+  mutate(PublicFacingWebsitesCategory = case_when(
+    PublicFacingWebsites %in% publicfacingwebsites_standardresponses ~ PublicFacingWebsites,
+    is.na(PublicFacingWebsites) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Public Facing Websites Bar Chart
+ggplot(public_facing_websites_categorized, aes(x = PublicFacingWebsitesCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Public Facing Websites Category", y = "Count", title = "Does your department have any public facing websites?")
+
+# View other responses
+publicfacingwebsites_otherresponses <- public_facing_websites_categorized %>%
+  filter(PublicFacingWebsitesCategory == "Other")
+
+print(publicfacingwebsites_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Privacy Notice
+
+# Define NA responses
+privacy_notice <- privacy_notice %>%
+  mutate(PrivacyNotice = na_if(PrivacyNotice, "NA")) %>%
+  mutate(PrivacyNotice = na_if(PrivacyNotice, "N/A"))
+
+# Define standard responses
+privacynotice_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+privacy_notice_categorized <- privacy_notice %>%
+  mutate(PrivacyNoticeCategory = case_when(
+    PrivacyNotice %in% privacynotice_standardresponses ~ PrivacyNotice,
+    is.na(PrivacyNotice) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Privacy Notice Bar Chart
+ggplot(privacy_notice_categorized, aes(x = PrivacyNoticeCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Privacy Notice Category", y = "Count", title = "Is there a link to a Privacy Notice in the footer or somewhere on the site?")
+
+# View other responses
+privacynotice_otherresponses <- privacy_notice_categorized %>%
+  filter(PrivacyNoticeCategory == "Other")
+
+print(privacynotice_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Cookie Banner
+
+# Define NA responses
+cookie_banner <- cookie_banner %>%
+  mutate(CookieBanner = na_if(CookieBanner, "NA")) %>%
+  mutate(CookieBanner = na_if(CookieBanner, "N/A"))
+
+# Define standard responses
+cookiebanner_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+cookie_banner_categorized <- cookie_banner %>%
+  mutate(CookieBannerCategory = case_when(
+    CookieBanner %in% privacynotice_standardresponses ~ CookieBanner,
+    is.na(CookieBanner) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Cookie Banner Bar Chart
+ggplot(cookie_banner_categorized, aes(x = CookieBannerCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Cookie Banner Category", y = "Count", title = "Is a Cookie Banner appropriately provided on the site?")
+
+# View other responses
+cookiebanner_otherresponses <- cookie_banner_categorized %>%
+  filter(CookieBannerCategory == "Other")
+
+print(cookiebanner_otherresponses)
+```
+
+```{r, fig.align='center'}
+# Minor Related Data
+
+# Define NA responses
+minor_related_data <- minor_related_data %>%
+  mutate(MinorRelatedData = na_if(MinorRelatedData, "NA")) %>%
+  mutate(MinorRelatedData = na_if(MinorRelatedData, "N/A"))
+
+# Define standard responses
+minorrelateddata_standardresponses <- c("Yes", "No")
+
+# Categorize standard, NA, and other responses
+minor_related_data_categorized <- minor_related_data %>%
+  mutate(MinorRelatedDataCategory = case_when(
+    MinorRelatedData %in% minorrelateddata_standardresponses ~ MinorRelatedData,
+    is.na(MinorRelatedData) ~ NA_character_,
+    TRUE ~ "Other"))
+
+# Minor Related Data Bar Chart
+ggplot(minor_related_data_categorized, aes(x = MinorRelatedDataCategory)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Minor Related Data Category", y = "Count", title = "Does your area process any data related to minors, individuals aged 13 and under?")
+
+# View other responses
+minorrelateddata_otherresponses <- minor_related_data_categorized %>%
+  filter(MinorRelatedDataCategory == "Other")
+
+print(minorrelateddata_otherresponses)
+```
